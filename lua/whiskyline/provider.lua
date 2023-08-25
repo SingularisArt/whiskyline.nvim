@@ -1,4 +1,4 @@
-local api, uv, lsp = vim.api, vim.uv, vim.lsp
+local api, lsp = vim.api, vim.lsp
 local pd = {}
 
 local function get_stl_bg()
@@ -82,7 +82,7 @@ function pd.mode()
 end
 
 local function path_sep()
-  return uv.os_uname().sysname == 'Windows_NT' and '\\' or '/'
+  return package.config:sub(1,1)
 end
 
 function pd.fileicon()
