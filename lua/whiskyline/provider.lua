@@ -120,23 +120,46 @@ function pd.fileinfo()
 end
 
 function pd.lsp()
-  local function lsp_stl(args)
-    local client = lsp.get_client_by_id(args.data.client_id)
-    local msg = client and client.name or ''
-    if args.data.result then
-      local val = args.data.result.value
-      msg = val.title
-        .. ' '
-        .. (val.message and val.message .. ' ' or '')
-        .. (val.percentage and val.percentage .. '%' or '')
-      if not val.message or val.kind == 'end' then
-        ---@diagnostic disable-next-line: need-check-nil
-        msg = client.name
-      end
-    elseif args.event == 'LspDetach' then
-      msg = ''
+  local function lsp_stl()
+    local buf_clients = vim.lsp.get_active_clients({ bufnr = vim.api.nvim_get_current_buf() })
+    if #buf_clients == 0 then
+      return "LSP Inactive"
     end
-    return '%.40{"' .. msg .. '"}'
+
+    local buf_ft = vim.bo.filetype
+    local buf_client_names = {}
+
+    local null_ls_s, null_ls = pcall(require, "null-ls")
+    if null_ls_s then
+      local sources = null_ls.get_sources()
+      for _, source in ipairs(sources) do
+        if source._validated then
+          for ft_name, ft_active in pairs(source.filetypes) do
+            if ft_name == buf_ft and ft_active then
+              table.insert(buf_client_names, source.name)
+            end
+          end
+        end
+      end
+    end
+
+    local unique_client_names = {}
+    for _, client_name_target in ipairs(buf_client_names) do
+      local is_duplicate = false
+      for _, client_name_compare in ipairs(unique_client_names) do
+        if client_name_target == client_name_compare then
+          is_duplicate = true
+        end
+      end
+      if not is_duplicate then
+        table.insert(unique_client_names, client_name_target)
+      end
+    end
+
+    local client_names_str = table.concat(unique_client_names, ", ")
+    local language_servers = string.format("[%s]", client_names_str)
+
+    return '%.40{"' .. language_servers .. '"}'
   end
 
   local result = {
